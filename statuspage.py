@@ -23,38 +23,38 @@ MAX_DAYS = 14
 MAX_AGE_SUMMARY = 24 * 60 * 60  # seconds (24 hours)
 MAX_AGE_STATUS = 5 * 60         # seconds (5 minutes)
 
-def get_status(outputfile, api_endpoint):
+def get_status(file, api_endpoint):
     print("Fetching blended status")
-    res = requests.get(api_endpoint + outputfile)
+    res = requests.get(api_endpoint + file)
     data = json.loads(res.text)
 
     return data['status']['indicator']
 
-def get_data(outputfile, api_endpoint, domain):
-    res = requests.get(api_endpoint + outputfile)
+def get_data(file, api_endpoint, domain):
+    res = requests.get(api_endpoint + file)
     data = json.loads(res.text)
 
     # write the data to output file
-    with open(FILE_PREFIX + domain + '-' + outputfile, 'w', encoding='utf-8') as f:
+    with open(FILE_PREFIX + domain + '-' + file, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
     return data
 
-def fetch_data(inputfile, api_endpoint, domain):
-    file = FILE_PREFIX + domain + '-' + inputfile
+def fetch_data(file, api_endpoint, domain):
+    temp_file = FILE_PREFIX + domain + '-' + file
 
     # check if the data file exists and if it's expired
-    if os.path.isfile(file):
-        age = time.time() - os.stat(file)[stat.ST_MTIME]
+    if os.path.isfile(temp_file):
+        age = time.time() - os.stat(temp_file)[stat.ST_MTIME]
 
         if age > MAX_AGE_SUMMARY:
-            data = get_data(inputfile, api_endpoint, domain)
+            data = get_data(file, api_endpoint, domain)
         else:
-            with open(file, 'r', encoding='utf-8') as f:
+            with open(temp_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
     else:
         age = 0
-        data = get_data(inputfile, api_endpoint, domain)
+        data = get_data(file, api_endpoint, domain)
 
     return {'data': data, 'age': round(age)}
 
@@ -110,15 +110,15 @@ def set_current_status(summary):
 # set the historical (daily) status LEDs (left 14 columns)
 def set_historical_status(incidents):
     sorted_incidents = sorted(incidents['data']['incidents'], key=lambda d: d['updated_at'], reverse=True)
-    currentdate = datetime.now(timezone.utc)
+    current_date = datetime.now(timezone.utc)
 
     for x in sorted_incidents:
         incident_date = x['updated_at']
         if incident_date.endswith('Z'):
             incident_date = incident_date[:-1] + '+00:00'
 
-        newdate = datetime.fromisoformat(incident_date)
-        delta = (currentdate - newdate).days + 1 # index should start at 1
+        new_date = datetime.fromisoformat(incident_date)
+        delta = (current_date - new_date).days + 1 # index should start at 1
         if delta < 14 and len(x['components']) > 0:
             status = x['impact']
             for y in x['components']:
@@ -126,7 +126,7 @@ def set_historical_status(incidents):
                     x_position = y['position'] - 1 # index should start at 0
                     y_position = 14 - delta
                     unicornhathd.set_pixel(y_position, x_position, 255, 0, 0) # set the impacted status LED
-                    print(f"Incident on {newdate} : {delta} days have passed since {currentdate}")
+                    print(f"Incident on {new_date} : {delta} days have passed since {current_date}")
 
 
 def display(domain):
