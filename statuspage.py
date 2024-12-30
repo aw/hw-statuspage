@@ -69,16 +69,7 @@ def set_status(r, g, b):
         unicornhathd.set_pixel(x, 14, r, g, b)
         unicornhathd.set_pixel(x, 13, 51, 153, 255) # blue divider line
 
-# set the blended status LEDs (top 3 rows)
-def set_blended_status(summary, api_endpoint, domain):
-    print(f"Blended status age: {summary['age']} seconds")
-
-    if summary['age'] > MAX_AGE_STATUS:
-        result = get_and_cache_data('status.json', api_endpoint, domain)
-        status = result['status']['indicator']
-    else:
-        status = summary['data']['status']['indicator']
-
+def set_status_colour(status):
     if status == 'critical':
         set_status(255, 0, 0)   # red
     elif status == 'major':
@@ -89,6 +80,18 @@ def set_blended_status(summary, api_endpoint, domain):
         set_status(0, 255, 0)   # green
     else:
         set_status(0, 0, 255)   # blue
+
+# set the blended status LEDs (top 3 rows)
+def set_blended_status(summary, api_endpoint, domain):
+    print(f"Blended status age: {summary['age']} seconds")
+
+    if summary['age'] > MAX_AGE_STATUS:
+        data = get_and_cache_data('status.json', api_endpoint, domain)
+        status = data['status']['indicator']
+    else:
+        status = summary['data']['status']['indicator']
+
+    set_status_colour(status)
 
 # set the current (daily) status LEDs (right 2 columns)
 def set_current_status(summary):
