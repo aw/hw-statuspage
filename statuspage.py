@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+#
+# statuspage.py - Display Statuspage data on the Unicorn HAT HD
+#
+# This script assumes the LED matrix is 16x16
+#
+# MIT License
+# Copyright (c) 2024 Alexander Williams, https://a1w.ca
 
 import sys, time, os, stat
 import requests, json
@@ -16,6 +23,8 @@ else:
 # VARIABLES
 SLEEP_TIMEOUT = 60 # seconds (1 minute)
 FILE_PREFIX = '/tmp/hat-status-'
+HAT_ROTATION = 180
+HAT_BRIGHTNESS = 0.2
 
 # CONSTANTS
 MAX_COMPONENTS = 13
@@ -124,25 +133,25 @@ def set_today_status(summary):
         for x in range(MAX_DAYS):
             unicornhathd.set_pixel(x, i, 0, 255, 0)     # set the historical status LEDs to green
 
-
 # set the historical (daily) status LEDs (left 14 columns)
 def set_historical_status(incidents):
     sorted_incidents = sorted(incidents['data']['incidents'], key=lambda d: d['updated_at'], reverse=True)
     current_date = datetime.now(timezone.utc)
 
+    # TODO: cleanup
     for x in sorted_incidents:
-        incident_date = x['updated_at']
-        if incident_date.endswith('Z'):
-            incident_date = incident_date[:-1] + '+00:00'
+        updated_at = x['updated_at']
+        if updated_at.endswith('Z'):
+            incident_date = updated_at[:-1] + '+00:00'
 
         new_date = datetime.fromisoformat(incident_date)
         delta = (current_date - new_date).days + 1 # index should start at 1
-        if delta < 14 and len(x['components']) > 0:
+        if delta < MAX_DAYS and len(x['components']) > 0:
             status = x['impact']
             for y in x['components']:
-                if y['position'] < 14:
+                if y['position'] < MAX_DAYS:
                     x_position = y['position'] - 1 # index should start at 0
-                    y_position = 14 - delta
+                    y_position = MAX_DAYS - delta
                     unicornhathd.set_pixel(y_position, x_position, 255, 0, 0) # set the impacted status LED
                     print(f"Incident on {new_date} : {delta} days have passed since {current_date}")
 
@@ -152,9 +161,9 @@ def display(domain):
 
     api_endpoint = 'https://' + domain + '/api/v2/'
 
-    unicornhathd.brightness(0.2)
+    unicornhathd.brightness(HAT_BRIGHTNESS)
     unicornhathd.clear()
-    unicornhathd.rotation(180)
+    unicornhathd.rotation(HAT_ROTATION)
 
     summary = fetch_summary_incidents('summary.json', api_endpoint, domain)
     set_blended_status(summary, api_endpoint, domain)
