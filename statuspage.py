@@ -140,9 +140,10 @@ def set_historical_status(incidents):
 
     # TODO: cleanup
     for x in sorted_incidents:
-        incident_date = x['updated_at']
-        if incident_date.endswith('Z'):
-            incident_date = incident_date[:-1] + '+00:00'
+        if x['updated_at'].endswith('Z'):
+            incident_date = x['updated_at'][:-1] + '+00:00'
+        else:
+            incident_date = x['updated_at']
 
         new_date = datetime.fromisoformat(incident_date)
         delta = (current_date - new_date).days + 1 # index should start at 1
