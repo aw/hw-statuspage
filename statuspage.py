@@ -69,17 +69,17 @@ def set_status(r, g, b):
         unicornhathd.set_pixel(x, 14, r, g, b)
         unicornhathd.set_pixel(x, 13, 51, 153, 255) # blue divider line
 
-def set_status_colour(status):
+def get_status_colour(status):
     if status == 'critical':
-        set_status(255, 0, 0)   # red
+        return [255, 0, 0]      # red
     elif status == 'major':
-        set_status(255, 79, 0)  # orange
+        return [255, 79, 0]     # orange
     elif status == 'minor':
-        set_status(255, 255, 0) # yellow
+        return [255, 255, 0]    # yellow
     elif status == 'none':
-        set_status(0, 255, 0)   # green
+        return [0, 255, 0]      # green
     else:
-        set_status(0, 0, 255)   # blue
+        return [0, 0, 255]      # blue
 
 # set the blended status LEDs (top 3 rows)
 def set_blended_status(summary, api_endpoint, domain):
@@ -91,7 +91,8 @@ def set_blended_status(summary, api_endpoint, domain):
     else:
         status = summary['data']['status']['indicator']
 
-    set_status_colour(status)
+    r, g, b = get_status_colour(status)
+    set_status(r, g, b)
 
 # set the current (daily) status LEDs (right 2 columns)
 def set_current_status(summary):
