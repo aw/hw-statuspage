@@ -45,7 +45,7 @@ def load_cached_data(file):
     with open(file, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def fetch_data(file, api_endpoint, domain):
+def fetch_summary_incidents(file, api_endpoint, domain):
     temp_file = FILE_PREFIX + domain + '-' + file
 
     # check if the temporary file exists, and if it's expired
@@ -145,11 +145,11 @@ def display(domain):
     unicornhathd.clear()
     unicornhathd.rotation(180)
 
-    summary = fetch_data('summary.json', api_endpoint, domain)
+    summary = fetch_summary_incidents('summary.json', api_endpoint, domain)
     set_blended_status(summary, api_endpoint, domain)
     set_current_status(summary)
 
-    incidents = fetch_data('incidents.json', api_endpoint, domain)
+    incidents = fetch_summary_incidents('incidents.json', api_endpoint, domain)
     set_historical_status(incidents)
 
     unicornhathd.show()
