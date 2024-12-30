@@ -23,19 +23,18 @@ MAX_DAYS = 14
 MAX_AGE_SUMMARY = 24 * 60 * 60  # seconds (24 hours)
 MAX_AGE_STATUS = 5 * 60         # seconds (5 minutes)
 
-def get_status(file, api_endpoint):
-    print("Fetching blended status")
-    res = requests.get(api_endpoint + file)
-    data = json.loads(res.text)
+def api_request(url):
+    res = requests.get(url)
 
-    return data['status']['indicator']
+    return json.loads(res.text)
 
 def get_data(file, api_endpoint, domain):
-    res = requests.get(api_endpoint + file)
-    data = json.loads(res.text)
+    temp_file = FILE_PREFIX + domain + '-' + file
 
-    # write the data to output file
-    with open(FILE_PREFIX + domain + '-' + file, 'w', encoding='utf-8') as f:
+    data = api_request(api_endpoint + file)
+
+    # write the data to temporary file
+    with open(temp_file, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
     return data
@@ -43,7 +42,7 @@ def get_data(file, api_endpoint, domain):
 def fetch_data(file, api_endpoint, domain):
     temp_file = FILE_PREFIX + domain + '-' + file
 
-    # check if the data file exists and if it's expired
+    # check if the temporary file exists, and if it's expired
     if os.path.isfile(temp_file):
         age = time.time() - os.stat(temp_file)[stat.ST_MTIME]
 
@@ -65,10 +64,12 @@ def set_status(r, g, b):
         unicornhathd.set_pixel(x, 13, 51, 153, 255) # blue divider line
 
 # set the blended status LEDs (top 3 rows)
-def set_blended_status(summary, api_endpoint):
+def set_blended_status(summary, api_endpoint, domain):
     print(f"Blended status age: {summary['age']} seconds")
+
     if summary['age'] > MAX_AGE_STATUS:
-        status = get_status('status.json', api_endpoint)
+        result = get_data('status.json', api_endpoint, domain)
+        status = result['status']['indicator']
     else:
         status = summary['data']['status']['indicator']
 
@@ -139,7 +140,7 @@ def display(domain):
     unicornhathd.rotation(180)
 
     summary = fetch_data('summary.json', api_endpoint, domain)
-    set_blended_status(summary, api_endpoint)
+    set_blended_status(summary, api_endpoint, domain)
     set_current_status(summary)
 
     incidents = fetch_data('incidents.json', api_endpoint, domain)
