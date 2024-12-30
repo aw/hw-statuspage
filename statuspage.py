@@ -23,38 +23,38 @@ MAX_DAYS = 14
 MAX_AGE_SUMMARY = 24 * 60 * 60  # seconds (24 hours)
 MAX_AGE_STATUS = 5 * 60         # seconds (5 minutes)
 
-def get_status(outputfile):
+def get_status(outputfile, api_endpoint):
     print("Fetching blended status")
-    res = requests.get(STATUSPAGE_API + outputfile)
+    res = requests.get(api_endpoint + outputfile)
     data = json.loads(res.text)
 
     return data['status']['indicator']
 
-def get_data(outputfile):
-    res = requests.get(STATUSPAGE_API + outputfile)
+def get_data(outputfile, api_endpoint, domain):
+    res = requests.get(api_endpoint + outputfile)
     data = json.loads(res.text)
 
     # write the data to output file
-    with open(FILE_PREFIX + SITE_URL + '-' + outputfile, 'w', encoding='utf-8') as f:
+    with open(FILE_PREFIX + domain + '-' + outputfile, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
     return data
 
-def fetch_data(inputfile):
-    file = FILE_PREFIX + SITE_URL + '-' + inputfile
+def fetch_data(inputfile, api_endpoint, domain):
+    file = FILE_PREFIX + domain + '-' + inputfile
 
     # check if the data file exists and if it's expired
     if os.path.isfile(file):
         age = time.time() - os.stat(file)[stat.ST_MTIME]
 
         if age > MAX_AGE_SUMMARY:
-            data = get_data(inputfile)
+            data = get_data(inputfile, api_endpoint, domain)
         else:
             with open(file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
     else:
         age = 0
-        data = get_data(inputfile)
+        data = get_data(inputfile, api_endpoint, domain)
 
     return {'data': data, 'age': round(age)}
 
@@ -65,10 +65,10 @@ def set_status(r, g, b):
         unicornhathd.set_pixel(x, 13, 51, 153, 255) # blue divider line
 
 # set the blended status LEDs (top 3 rows)
-def set_blended_status(summary):
+def set_blended_status(summary, api_endpoint):
     print(f"Blended status age: {summary['age']} seconds")
     if summary['age'] > MAX_AGE_STATUS:
-        status = get_status('status.json')
+        status = get_status('status.json', api_endpoint)
     else:
         status = summary['data']['status']['indicator']
 
@@ -129,25 +129,26 @@ def set_historical_status(incidents):
                     print(f"Incident on {newdate} : {delta} days have passed since {currentdate}")
 
 
-def start():
-    print("StatusPage: " + SITE_URL)
+def display(domain):
+    print("StatusPage: " + domain)
+
+    api_endpoint = 'https://' + domain + '/api/v2/'
 
     unicornhathd.brightness(0.2)
     unicornhathd.clear()
     unicornhathd.rotation(180)
 
-    summary = fetch_data('summary.json')
-    set_blended_status(summary)
+    summary = fetch_data('summary.json', api_endpoint, domain)
+    set_blended_status(summary, api_endpoint)
     set_current_status(summary)
 
-    incidents = fetch_data('incidents.json')
+    incidents = fetch_data('incidents.json', api_endpoint, domain)
     set_historical_status(incidents)
 
     unicornhathd.show()
     print("")
-    time.sleep(SLEEP_TIMEOUT) # sleep for N seconds
 
 while True:
-    for SITE_URL in URL_LIST:
-        STATUSPAGE_API = 'https://' + SITE_URL + '/api/v2/'
-        start()
+    for domain in URL_LIST:
+        display(domain)
+        time.sleep(SLEEP_TIMEOUT) # sleep for N seconds
