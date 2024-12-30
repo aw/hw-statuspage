@@ -23,6 +23,13 @@ MAX_DAYS = 14
 MAX_AGE_SUMMARY = 24 * 60 * 60  # seconds (24 hours)
 MAX_AGE_STATUS = 5 * 60         # seconds (5 minutes)
 
+# STATUS LED COLOURS (RGB)
+COLOUR_RED      = [255, 0, 0]
+COLOUR_ORANGE   = [255, 79, 0]
+COLOUR_YELLOW   = [255, 255, 0]
+COLOUR_GREEN    = [0, 255, 0]
+COLOUR_BLUE     = [0, 0, 255]
+
 def api_request(url):
     res = requests.get(url)
 
@@ -71,15 +78,15 @@ def set_status(r, g, b):
 
 def get_status_colour(status):
     if status == 'critical':
-        return [255, 0, 0]      # red
+        return COLOUR_RED
     elif status == 'major':
-        return [255, 79, 0]     # orange
+        return COLOUR_ORANGE
     elif status == 'minor':
-        return [255, 255, 0]    # yellow
+        return COLOUR_YELLOW
     elif status == 'none':
-        return [0, 255, 0]      # green
+        return COLOUR_GREEN
     else:
-        return [0, 0, 255]      # blue
+        return COLOUR_BLUE
 
 # set the blended status LEDs (top 3 rows)
 def set_blended_status(summary, api_endpoint, domain):
@@ -94,29 +101,29 @@ def set_blended_status(summary, api_endpoint, domain):
     r, g, b = get_status_colour(status)
     set_status(r, g, b)
 
-# set the current (daily) status LEDs (right 2 columns)
-def set_current_status(summary):
-    i = 0
+def get_today_colour(status):
+    if status == 'major_outage':
+        return COLOUR_RED
+    elif status == 'partial_outage':
+        return COLOUR_ORANGE
+    elif status == 'degraded_performance':
+        return COLOUR_YELLOW
+    elif status == 'operational':
+        return COLOUR_GREEN
+    else:
+        return COLOUR_BLUE
 
-    for y in summary['data']['components']:
-        if i < MAX_COMPONENTS:
-            unicornhathd.set_pixel(14, i, 51, 153, 255)     # blue divider line
+# set today's (daily) status LEDs (right 2 columns)
+def set_today_status(summary):
+    for i, y in zip(range(MAX_COMPONENTS), summary['data']['components']):
+        unicornhathd.set_pixel(14, i, 51, 153, 255)     # blue divider line
 
-            if y['status'] == 'major_outage':
-                unicornhathd.set_pixel(15, i, 255, 0, 0)    # red
-            elif y['status'] == 'partial_outage':
-                unicornhathd.set_pixel(15, i, 255, 79, 0)   # orange
-            elif y['status'] == 'degraded_performance':
-                unicornhathd.set_pixel(15, i, 255, 255, 0)  # yellow
-            elif y['status'] == 'operational':
-                unicornhathd.set_pixel(15, i, 0, 255, 0)    # green
-            else:
-                unicornhathd.set_pixel(15, i, 0, 0, 255)    # blue
+        r, g, b = get_today_colour(y['status'])
+        unicornhathd.set_pixel(15, i, r, g, b)
 
-            for x in range(MAX_DAYS):
-                unicornhathd.set_pixel(x, i, 0, 255, 0)     # set the daily status LED
+        for x in range(MAX_DAYS):
+            unicornhathd.set_pixel(x, i, 0, 255, 0)     # set the historical status LEDs to green
 
-        i += 1
 
 # set the historical (daily) status LEDs (left 14 columns)
 def set_historical_status(incidents):
@@ -151,7 +158,7 @@ def display(domain):
 
     summary = fetch_summary_incidents('summary.json', api_endpoint, domain)
     set_blended_status(summary, api_endpoint, domain)
-    set_current_status(summary)
+    set_today_status(summary)
 
     incidents = fetch_summary_incidents('incidents.json', api_endpoint, domain)
     set_historical_status(incidents)
