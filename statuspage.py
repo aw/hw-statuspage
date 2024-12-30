@@ -28,16 +28,22 @@ def api_request(url):
 
     return json.loads(res.text)
 
-def get_data(file, api_endpoint, domain):
+def cache_data(file, data):
+    with open(file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def get_and_cache_data(file, api_endpoint, domain):
     temp_file = FILE_PREFIX + domain + '-' + file
 
     data = api_request(api_endpoint + file)
 
-    # write the data to temporary file
-    with open(temp_file, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    cache_data(temp_file, data)
 
     return data
+
+def load_cached_data(file):
+    with open(file, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 def fetch_data(file, api_endpoint, domain):
     temp_file = FILE_PREFIX + domain + '-' + file
@@ -47,13 +53,13 @@ def fetch_data(file, api_endpoint, domain):
         age = time.time() - os.stat(temp_file)[stat.ST_MTIME]
 
         if age > MAX_AGE_SUMMARY:
-            data = get_data(file, api_endpoint, domain)
+            data = get_and_cache_data(file, api_endpoint, domain)
         else:
-            with open(temp_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            data = load_cached_data(temp_file)
+
     else:
         age = 0
-        data = get_data(file, api_endpoint, domain)
+        data = get_and_cache_data(file, api_endpoint, domain)
 
     return {'data': data, 'age': round(age)}
 
@@ -68,7 +74,7 @@ def set_blended_status(summary, api_endpoint, domain):
     print(f"Blended status age: {summary['age']} seconds")
 
     if summary['age'] > MAX_AGE_STATUS:
-        result = get_data('status.json', api_endpoint, domain)
+        result = get_and_cache_data('status.json', api_endpoint, domain)
         status = result['status']['indicator']
     else:
         status = summary['data']['status']['indicator']
