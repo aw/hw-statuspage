@@ -133,6 +133,12 @@ def set_today_status(summary):
         for x in range(MAX_DAYS):
             unicornhathd.set_pixel(x, i, 0, 255, 0)     # set the historical status LEDs to green
 
+def format_incident_date(incident_date):
+    if incident_date.endswith('Z'):
+        return datetime.fromisoformat(incident_date[:-1] + '+00:00')
+    else:
+        return datetime.fromisoformat(incident_date)
+
 # set the historical (daily) status LEDs (left 14 columns)
 def set_historical_status(incidents):
     sorted_incidents = sorted(incidents['data']['incidents'], key=lambda d: d['updated_at'], reverse=True)
@@ -140,21 +146,17 @@ def set_historical_status(incidents):
 
     # TODO: cleanup
     for x in sorted_incidents:
-        if x['updated_at'].endswith('Z'):
-            incident_date = x['updated_at'][:-1] + '+00:00'
-        else:
-            incident_date = x['updated_at']
+        incident_date = format_incident_date(x['updated_at'])
+        delta = (current_date - incident_date).days + 1 # index should start at 1
 
-        new_date = datetime.fromisoformat(incident_date)
-        delta = (current_date - new_date).days + 1 # index should start at 1
         if delta < MAX_DAYS and len(x['components']) > 0:
-            status = x['impact']
             for y in x['components']:
                 if y['position'] < MAX_DAYS:
                     x_position = y['position'] - 1 # index should start at 0
                     y_position = MAX_DAYS - delta
-                    unicornhathd.set_pixel(y_position, x_position, 255, 0, 0) # set the impacted status LED
-                    print(f"Incident on {new_date} : {delta} days have passed since {current_date}")
+                    r, g, b = get_status_colour(x['impact'])
+                    unicornhathd.set_pixel(y_position, x_position, r, g, b) # set the impacted status LED
+                    print(f"Incident ({x['impact']}) on {incident_date} : {delta} days have passed since {current_date}")
 
 
 def display(domain):
