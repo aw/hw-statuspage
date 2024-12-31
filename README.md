@@ -106,13 +106,13 @@ The script will run in an infinite loop, fetching status updates of one URL, the
 
 It will first fetch the summary from the `summary.json` URL to obtain the blended status of the site. It will cache the results in a temporary file in `/tmp` (`FILE_PREFIX` variable), and then update the current site status (above the _horizontal blue line_).
 
-If the temporary file exists, it will check its age and use the existing file if it's less than 24 hours old (`MAX_AGE_SUMMARY` constant). This is to prevent constantly hitting the API to obtain historical data that technically shouldn't change (unless someone has a time machine...).
+If the temporary file exists, it will check its age and use the existing file if it's less than 1 hour old (`MAX_AGE_SUMMARY` constant).
 
 If the blended status is more than 5 minutes old (`MAX_AGE_STATUS` constant), it will fetch a new status from the `status.json` URL.
 
 The summary data will then be used to update today's component status (right of the _vertical blue line_).
 
-Next, the script will fetch the historical incident data from the `incidents.json` URL and update the historical component status (left of the _vertical blue line_). Similar to the `summary.json`, the file will be cached in a temporary location for up to 24 hours and re-used to avoid hitting the API too often.
+Next, the script will fetch the historical incident data from the `incidents.json` URL and update the historical component status (left of the _vertical blue line_). Similar to the `summary.json`, the file will be cached in a temporary location, but this time for up to 24 hours. This is to prevent constantly hitting the API to obtain historical data that technically shouldn't change (unless someone has a time machine...).
 
 ## Contributing
 

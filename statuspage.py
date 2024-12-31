@@ -29,7 +29,8 @@ HAT_BRIGHTNESS = 0.2
 # CONSTANTS
 MAX_COMPONENTS = 13
 MAX_DAYS = 14
-MAX_AGE_SUMMARY = 24 * 60 * 60  # seconds (24 hours)
+MAX_AGE_SUMMARY = 1 * 60 * 60   # seconds (1 hour)
+MAX_AGE_INCIDENT = 24 * 60 * 60 # seconds (24 hours)
 MAX_AGE_STATUS = 5 * 60         # seconds (5 minutes)
 
 # STATUS LED COLOURS (RGB)
@@ -68,7 +69,8 @@ def fetch_summary_incidents(file, api_endpoint, domain):
     if os.path.isfile(temp_file):
         age = time.time() - os.stat(temp_file)[stat.ST_MTIME]
 
-        if age > MAX_AGE_SUMMARY:
+        expiry = MAX_AGE_SUMMARY if file == 'summary.json' else MAX_AGE_INCIDENT
+        if age > expiry:
             data = get_and_cache_data(file, api_endpoint, domain)
         else:
             data = load_cached_data(temp_file)
@@ -99,7 +101,7 @@ def get_status_colour(status):
 
 # set the blended status LEDs (top 3 rows)
 def set_blended_status(summary, api_endpoint, domain):
-    print(f"Blended status age: {summary['age']} seconds")
+    print(f"Summary status age: {summary['age']} seconds")
 
     if summary['age'] > MAX_AGE_STATUS:
         data = get_and_cache_data('status.json', api_endpoint, domain)
@@ -131,6 +133,7 @@ def set_today_status(summary):
     for i, y in zip(range(MAX_COMPONENTS), summary['data']['components']):
         unicornhathd.set_pixel(14, i, 51, 153, 255)     # blue divider line
 
+        print(f"Today's status for component {i+1} - {y['status']} - {y['name']}")
         r, g, b = get_today_colour(y['status'])
         unicornhathd.set_pixel(15, i, r, g, b)
 
@@ -142,25 +145,31 @@ def format_incident_date(incident_date):
     else:
         return datetime.fromisoformat(incident_date)
 
+def is_valid_incident(incident):
+    current_date = datetime.now(timezone.utc)
+    incident_date = format_incident_date(incident['updated_at'])
+    delta = (current_date - incident_date).days + 1 # index should start at 1
+
+    incident['delta'] = delta
+
+    return delta <= MAX_DAYS and len(incident['components']) > 0
+
+def is_incident_visible(component):
+    return component['position'] <= MAX_COMPONENTS
+
 # set the historical (daily) status LEDs (left 14 columns)
 def set_historical_status(incidents):
     sorted_incidents = sorted(incidents['data']['incidents'], key=lambda d: d['updated_at'], reverse=True)
-    current_date = datetime.now(timezone.utc)
 
-    # TODO: cleanup
-    for x in sorted_incidents:
-        incident_date = format_incident_date(x['updated_at'])
-        delta = (current_date - incident_date).days + 1 # index should start at 1
-
-        if delta < MAX_DAYS and len(x['components']) > 0:
-            for y in x['components']:
-                if y['position'] < MAX_DAYS:
-                    x_position = y['position'] - 1 # index should start at 0
-                    y_position = MAX_DAYS - delta
-                    r, g, b = get_status_colour(x['impact'])
-                    unicornhathd.set_pixel(y_position, x_position, r, g, b) # set the impacted status LED
-                    print(f"Incident ({x['impact']}) on {incident_date} : {delta} days have passed since {current_date}")
-
+    # FIXME: position isn't unique per component, so it's an unreliable way to determine a component's location
+    # FIXME: y['position'] doesn't always start at 1 either (ex: if the component order has never been changed, or if third-party components are added)
+    for x in filter(is_valid_incident, sorted_incidents):
+        for y in filter(is_incident_visible, x['components']):
+            x_position = MAX_DAYS - x['delta']
+            y_position = y['position'] - 1 # index should start at 0
+            r, g, b = get_status_colour(x['impact'])
+            unicornhathd.set_pixel(x_position, y_position, r, g, b) # set the impacted status LED
+            print(f"Incident ({x['impact']}) on {x['updated_at']} : {x['delta']} days ago for component {y['position']}: {y['name']}")
 
 def display(domain):
     print("StatusPage: " + domain)
