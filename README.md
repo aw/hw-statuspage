@@ -122,4 +122,4 @@ Next, the script will fetch the historical incident data from the `incidents.jso
 
 [MIT License](LICENSE)
 
-Copyright (c) 2024 Alexander Williams, https://a1w.ca
+Copyright (c) 2024~2025 Alexander Williams, https://a1w.ca
