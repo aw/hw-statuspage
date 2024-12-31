@@ -51,7 +51,6 @@ def cache_data(file, data):
 
 def get_and_cache_data(file, api_endpoint, domain):
     temp_file = FILE_PREFIX + domain + '-' + file
-
     data = api_request(api_endpoint + file)
 
     cache_data(temp_file, data)
@@ -128,8 +127,9 @@ def initialize_historical_status(row):
     for column in range(MAX_DAYS):
         unicornhathd.set_pixel(column, row, 0, 255, 0)  # set the historical status LEDs to green
 
-# set today's (daily) status LEDs (right 2 columns)
+# set today's (hourly) status LEDs (right 2 columns)
 def set_today_status(summary):
+    components = []
     for i, y in zip(range(MAX_COMPONENTS), summary['data']['components']):
         unicornhathd.set_pixel(14, i, 51, 153, 255)     # blue divider line
 
@@ -137,7 +137,10 @@ def set_today_status(summary):
         r, g, b = get_today_colour(y['status'])
         unicornhathd.set_pixel(15, i, r, g, b)
 
+        components.append({'position': i, 'id': y['id'], 'name': y['name']})
         initialize_historical_status(i)
+
+    return components
 
 def format_incident_date(incident_date):
     if incident_date.endswith('Z'):
@@ -154,22 +157,24 @@ def is_valid_incident(incident):
 
     return delta <= MAX_DAYS and len(incident['components']) > 0
 
-def is_incident_visible(component):
-    return component['position'] <= MAX_COMPONENTS
+def filter_components(incident_components, all_components):
+    component_ids = {entry['id'] for entry in incident_components}
+
+    return list(filter(lambda item: item['id'] in component_ids, all_components))
 
 # set the historical (daily) status LEDs (left 14 columns)
-def set_historical_status(incidents):
+def set_historical_status(components, incidents):
     sorted_incidents = sorted(incidents['data']['incidents'], key=lambda d: d['updated_at'], reverse=True)
 
-    # FIXME: position isn't unique per component, so it's an unreliable way to determine a component's location
-    # FIXME: y['position'] doesn't always start at 1 either (ex: if the component order has never been changed, or if third-party components are added)
     for x in filter(is_valid_incident, sorted_incidents):
-        for y in filter(is_incident_visible, x['components']):
+        filtered_components = filter_components(x['components'], components)
+
+        for y in filtered_components:
             x_position = MAX_DAYS - x['delta']
-            y_position = y['position'] - 1 # index should start at 0
             r, g, b = get_status_colour(x['impact'])
-            unicornhathd.set_pixel(x_position, y_position, r, g, b) # set the impacted status LED
-            print(f"Incident ({x['impact']}) on {x['updated_at']} : {x['delta']} days ago for component {y['position']}: {y['name']}")
+            unicornhathd.set_pixel(x_position, y['position'], r, g, b)
+
+            print(f"Incident ({x['impact']}) on {x['updated_at']} : {x['delta']} days ago for component {y['position']+1}: {y['name']}")
 
 def display(domain):
     print("StatusPage: " + domain)
@@ -182,10 +187,10 @@ def display(domain):
 
     summary = fetch_summary_incidents('summary.json', api_endpoint, domain)
     set_blended_status(summary, api_endpoint, domain)
-    set_today_status(summary)
+    components = set_today_status(summary)
 
     incidents = fetch_summary_incidents('incidents.json', api_endpoint, domain)
-    set_historical_status(incidents)
+    set_historical_status(components, incidents)
 
     unicornhathd.show()
     print("")
