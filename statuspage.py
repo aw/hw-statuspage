@@ -122,6 +122,10 @@ def get_today_colour(status):
     else:
         return COLOUR_BLUE
 
+def initialize_historical_status(row):
+    for column in range(MAX_DAYS):
+        unicornhathd.set_pixel(column, row, 0, 255, 0)  # set the historical status LEDs to green
+
 # set today's (daily) status LEDs (right 2 columns)
 def set_today_status(summary):
     for i, y in zip(range(MAX_COMPONENTS), summary['data']['components']):
@@ -130,8 +134,7 @@ def set_today_status(summary):
         r, g, b = get_today_colour(y['status'])
         unicornhathd.set_pixel(15, i, r, g, b)
 
-        for x in range(MAX_DAYS):
-            unicornhathd.set_pixel(x, i, 0, 255, 0)     # set the historical status LEDs to green
+        initialize_historical_status(i)
 
 def format_incident_date(incident_date):
     if incident_date.endswith('Z'):
