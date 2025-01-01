@@ -1,0 +1,2 @@
+requests~=2.31.0
+unicornhathd==0.0.4
