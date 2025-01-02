@@ -1,6 +1,6 @@
 # Statuspage Unicorn HAT HD
 
-A small Python script for fetching _site_, _component_, and _incident_ status from the [Atlassian Statuspage v2 API](https://www.atlassian.com/software/statuspage), and displaying them on a [Unicorn HAT HD](https://github.com/pimoroni/unicorn-hat-hd), as shown below:
+Display _site_, _component_, and _incident_ status from the [Atlassian Statuspage.io v2 API](https://www.atlassian.com/software/statuspage) on a [Unicorn HAT HD](https://github.com/pimoroni/unicorn-hat-hd), as shown below:
 
 | Site | Status |
 | ---- | ---- |
@@ -90,6 +90,7 @@ sudo reboot
 ```
 git clone https://github.com/aw/hw-statuspage
 cd hw-statuspage
+pip3 install -r requirements.txt
 ```
 
 ### Run the script
@@ -112,7 +113,7 @@ If the blended status is more than 5 minutes old (`MAX_AGE_STATUS` constant), it
 
 The summary data will then be used to update today's component status (right of the _vertical blue line_).
 
-Next, the script will fetch the historical incident data from the `incidents.json` URL and update the historical component status (left of the _vertical blue line_). Similar to the `summary.json`, the file will be cached in a temporary location, but this time for up to 24 hours. This is to prevent constantly hitting the API to obtain historical data that technically shouldn't change (unless someone has a time machine...).
+Next, the script will fetch the historical incident data from the `incidents.json` URL and update the historical component status (left of the _vertical blue line_). Similar to the `summary.json`, the file will be cached in a temporary location, but this time for up to 24 hours (`MAX_AGE_INCIDENT` constant). This is to prevent constantly hitting the API to obtain historical data that technically shouldn't change (unless someone has a time machine...).
 
 ## Contributing
 
