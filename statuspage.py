@@ -104,11 +104,12 @@ def set_blended_status(summary, api_endpoint, domain):
 
     if summary['age'] > MAX_AGE_STATUS:
         data = get_and_cache_data('status.json', api_endpoint, domain)
-        status = data['status']['indicator']
+        status = data['status']
     else:
-        status = summary['data']['status']['indicator']
+        status = summary['data']['status']
 
-    r, g, b = get_status_colour(status)
+    print(f"Blended status: {status['description']}")
+    r, g, b = get_status_colour(status['indicator'])
     set_status(r, g, b)
 
 def get_today_colour(status):
